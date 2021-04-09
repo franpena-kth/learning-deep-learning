@@ -3,7 +3,6 @@ import time
 import torch
 from torch import nn
 
-from nlp_from_scratch.names_classifier.nc_data import DataProcessor, NamesDataset
 from nlp_from_scratch.names_classifier.nc_model import RNN
 
 
@@ -33,7 +32,7 @@ def timeSince(since):
     return '%dm %ds' % (m, s)
 
 
-def train_cycle():
+def train_cycle(data_processor):
     n_iters = 100000
     print_every = 5000
     plot_every = 1000
@@ -43,7 +42,6 @@ def train_cycle():
     all_losses = []
 
     start = time.time()
-    data_processor = DataProcessor()
     # data_set = OwnDataset()
     n_hidden = 128
     model = RNN(data_processor.n_letters, n_hidden, data_processor.n_categories)

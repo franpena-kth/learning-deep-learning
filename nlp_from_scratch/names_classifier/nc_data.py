@@ -40,8 +40,8 @@ class DataProcessor:
         return [self.unicodeToAscii(line) for line in lines]
 
     def init_categories(self):
-        data_folder = '/Users/frape/Datasets/uncompressed/pytorch-nlp-from-scratch-names/'
-        for filename in findFiles(data_folder + 'data/names/*.txt'):
+        data_folder = '/Users/frape/Datasets/uncompressed/pytorch-nlp-from-scratch/'
+        for filename in findFiles(data_folder + 'names/*.txt'):
             category = os.path.splitext(os.path.basename(filename))[0]
             self.all_categories.append(category)
             lines = self.readLines(filename)

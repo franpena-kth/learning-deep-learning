@@ -106,7 +106,8 @@ def plant_seeds():
 
 def main():
     plant_seeds()
-    model, current_loss, all_losses = train_cycle()
+    data_processor = DataProcessor()
+    model, current_loss, all_losses = train_cycle(data_processor)
     plot(all_losses)
     predict(model, 'Dovesky')
     predict(model, 'Jackson')
