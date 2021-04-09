@@ -194,7 +194,8 @@ def create_sine_train_test_sets(sequence_length):
 
 
 def create_char_dataset():
-    data_path = "./sherlock.txt"
+    data_folder = '/Users/frape/Datasets/uncompressed/literature/'
+    data_path = data_folder + "sherlock.txt"
     # data_path = "./shakespeare.txt"
     # data_path = "./parallel_bodies.txt"
     #######################################
@@ -227,9 +228,10 @@ def create_char_dataset():
 
 
 def create_word_dataset():
-    # data_path = "./sherlock.txt"
+    data_folder = '/Users/frape/Datasets/uncompressed/literature/'
+    data_path = data_folder + "sherlock.txt"
     # data_path = "./reddit-cleanjokes.csv"
-    data_path = "./parallel_bodies.txt"
+    # data_path = "./parallel_bodies.txt"
     #######################################
 
     # load the text file
@@ -297,7 +299,8 @@ class CharDataset(torch.utils.data.Dataset):
     #     return text.split(' ')
 
     def load_chars(self):
-        data_path = "./shakespeare.txt"
+        data_folder = '/Users/frape/Datasets/uncompressed/literature/'
+        data_path = data_folder + "sherlock.txt"
         # data_path = "./parallel_bodies.txt"
         data = open(data_path, 'r').read()[:10000]
 

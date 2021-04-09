@@ -61,8 +61,8 @@ class FranpenaCharSequenceRNN(nn.Module):
 def train(model, data):
 
     data_size = len(data)
-    # save_path = "./FranpenaCharRNN_test.pth"
-    save_path = "./FranpenaWordRNN_source.pth"
+    save_path = "./FranpenaCharRNN_test.pth"
+    # save_path = "./FranpenaWordRNN_source.pth"
 
     # loss function and optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -184,6 +184,8 @@ def evaluate(model, data, ix_to_char):
     rand_index = numpy.random.randint(data_size - 1)
     input_seq = data[rand_index: rand_index + 1]
 
+    model.reset_hidden_state(1)
+
     print("----------------------------------------")
     while True:
         # forward pass
@@ -196,7 +198,7 @@ def evaluate(model, data, ix_to_char):
         index = dist.sample()
 
         # print the sampled character
-        print(ix_to_char[index.item()], end=' ')
+        print(ix_to_char[index.item()], end='')
 
         # next input is current output
         input_seq[0][0] = index.item()
@@ -210,11 +212,11 @@ def evaluate(model, data, ix_to_char):
 
 def main():
     # set random seed to 0
-    numpy.random.seed(0)
-    torch.manual_seed(0)
+    # numpy.random.seed(0)
+    # torch.manual_seed(0)
 
-    # data, char_to_ix, ix_to_char, data_size, vocab_size = create_char_dataset()
-    data, char_to_ix, ix_to_char, data_size, vocab_size = create_word_dataset()
+    data, char_to_ix, ix_to_char, data_size, vocab_size = create_char_dataset()
+    # data, char_to_ix, ix_to_char, data_size, vocab_size = create_word_dataset()
 
     # print('X_train', X_train.shape)
     # print('y_train', y_train.shape)
@@ -231,6 +233,8 @@ def main():
     train(model, data)
     # dataset = CharDataset(SEQUENCE_LENGTH)
     # train_with_data_loader(model, dataset)
+    load_path = "./FranpenaCharRNN_test.pth"
+    model.load_state_dict(torch.load(load_path))
     evaluate(model, data, ix_to_char)
 
 

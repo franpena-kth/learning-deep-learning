@@ -43,7 +43,8 @@ def train():
     load_chk = False  # load weights from save_path directory to continue training
     # save_path = "./pretrained/CharRNN_shakespeare.pth"
     save_path = "./pretrained/CharRNN_test.pth"
-    data_path = "./data/shakespeare.txt"
+    data_folder = '/Users/frape/Datasets/uncompressed/literature/'
+    data_path = data_folder + "shakespeare.txt"
     # data_path = "./data/sherlock.txt"
     #######################################
 
