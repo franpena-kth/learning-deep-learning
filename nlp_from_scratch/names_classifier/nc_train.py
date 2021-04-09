@@ -7,12 +7,8 @@ from nlp_from_scratch.names_classifier.nc_data import DataProcessor, NamesDatase
 from nlp_from_scratch.names_classifier.nc_model import RNN
 
 
-def train(model, category_tensor, line_tensor):
+def train(model, criterion, optimiser, category_tensor, line_tensor):
     model.initHidden()
-    criterion = nn.NLLLoss()
-    learning_rate = 0.005  # If you set this too high, it might explode. If too low, it might not learn
-    optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
     model.zero_grad()
 
     output = model(line_tensor)
@@ -52,13 +48,17 @@ def train_cycle():
     n_hidden = 128
     model = RNN(data_processor.n_letters, n_hidden, data_processor.n_categories)
 
+    criterion = nn.NLLLoss()
+    learning_rate = 0.005  # If you set this too high, it might explode. If too low, it might not learn
+    optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
     for iter in range(1, n_iters + 1):
         category, line, category_tensor, line_tensor = \
             data_processor.randomTrainingExample()
     # for iter in range(1, n_iters + 1):
     #     category, line, category_tensor, line_tensor =\
     #         data_set[iter]
-        output, loss = train(model, category_tensor, line_tensor)
+        output, loss = train(model, criterion, optimiser, category_tensor, line_tensor)
         current_loss += loss
 
         # Print iter number, loss, name and guess
