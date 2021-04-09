@@ -15,8 +15,7 @@ def train(model, category_tensor, line_tensor):
 
     model.zero_grad()
 
-    for i in range(line_tensor.size()[0]):
-        output = model(line_tensor[i])
+    output = model(line_tensor)
 
     loss = criterion(output, category_tensor)
     loss.backward()

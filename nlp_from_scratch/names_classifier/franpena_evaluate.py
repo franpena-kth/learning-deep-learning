@@ -31,9 +31,7 @@ def plot(all_losses):
 # Just return an output given a line
 def evaluate(model, line_tensor):
     model.initHidden()
-
-    for i in range(line_tensor.size()[0]):
-        output = model(line_tensor[i])
+    output = model(line_tensor)
 
     return output
 
