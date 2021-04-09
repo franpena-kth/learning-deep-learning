@@ -13,7 +13,7 @@ import time
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from nlp_from_scratch.names_classifier.franpena_evaluate import plant_seeds
+from nlp_from_scratch.names_classifier.nc_evaluate import plant_seeds
 
 
 def findFiles(path): return glob.glob(path)

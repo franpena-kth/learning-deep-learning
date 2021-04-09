@@ -3,8 +3,8 @@ import time
 import torch
 from torch import nn
 
-from nlp_from_scratch.names_classifier.franpena_data import DataProcessor, NamesDataset
-from nlp_from_scratch.names_classifier.franpena_model import RNN
+from nlp_from_scratch.names_classifier.nc_data import DataProcessor, NamesDataset
+from nlp_from_scratch.names_classifier.nc_model import RNN
 
 
 def train(model, category_tensor, line_tensor):

@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 ############################
 from matplotlib import ticker
 
-from nlp_from_scratch.names_classifier.franpena_data import DataProcessor
-from nlp_from_scratch.names_classifier.franpena_model import RNN
-from nlp_from_scratch.names_classifier.franpena_train import train_cycle
+from nlp_from_scratch.names_classifier.nc_data import DataProcessor
+from nlp_from_scratch.names_classifier.nc_model import RNN
+from nlp_from_scratch.names_classifier.nc_train import train_cycle
 
 
 def plot(all_losses):
