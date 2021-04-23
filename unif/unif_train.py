@@ -16,10 +16,20 @@ def timeSince(since):
     return '%dm %ds' % (m, s)
 
 
-def train(model, loss_function, optimiser, code_token_ids, desc_token_ids):
+def train(model, loss_function, optimiser, tokenized_code, tokenized_desc):
     model.zero_grad()
 
-    code_embedding, desc_embedding = model(code_token_ids, desc_token_ids)
+    code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int)
+    code_token_ids = code_token_ids.reshape(1, -1)
+    desc_token_ids = tokenized_desc['input_ids']
+    desc_token_ids = desc_token_ids.reshape(1, -1)
+
+    code_mask = torch.tensor(tokenized_code['attention_mask'], dtype=torch.int)
+    code_mask = code_mask.reshape(1, -1)
+    desc_mask = tokenized_desc['attention_mask']
+    desc_mask = desc_mask.reshape(1, -1)
+
+    code_embedding, desc_embedding = model(code_token_ids, code_mask, desc_token_ids, desc_mask)
 
     POSITIVE_SIMILARITY = torch.ones(1)
     NEGATIVE_SIMILARITY = -torch.ones(1)
@@ -59,11 +69,7 @@ def train_cycle():
     for iter in range(n_iters):
         # print(iter)
         tokenized_code, tokenized_desc = dataset[iter]
-        code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int)
-        code_token_ids = code_token_ids.reshape(1, -1)
-        desc_token_ids = tokenized_desc['input_ids']
-        desc_token_ids = desc_token_ids.reshape(1, -1)
-        code_embedding, desc_embedding, loss = train(model, loss_function, optimiser, code_token_ids, desc_token_ids)
+        code_embedding, desc_embedding, loss = train(model, loss_function, optimiser, tokenized_code, tokenized_desc)
         current_loss += loss
 
         # Print iter number, loss, name and guess
