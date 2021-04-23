@@ -4,6 +4,8 @@ import torch
 from torch import nn
 import numpy
 
+from unif.top_n_evaluator import prepare_embeddings_for_topn_evaluation, compute_metrics, output_scores
+
 
 def get_top_n(n, results):
     count = 0
@@ -37,7 +39,13 @@ def evaluate_top_n(code_embeddings, desc_embeddings):
         top_1 = get_top_n(1, results)
         top_3 = get_top_n(3, results)
         top_5 = get_top_n(5, results)
+        top_15 = get_top_n(15, results)
 
         print('Top 1', top_1)
         print('Top 3', top_3)
         print('Top 5', top_5)
+        print('Top 15', top_15)
+
+        queries_ids, relevant_docs, queries_result_list = prepare_embeddings_for_topn_evaluation(code_embeddings, desc_embeddings)
+        metrics = compute_metrics(queries_result_list, queries_ids, relevant_docs)
+        output_scores(metrics)
