@@ -12,19 +12,23 @@ DATASET_SIZE = 10000
 
 class CodeDescDataset(Dataset):
 
-    def __init__(self, code_snippets_file, descriptions_file):
+    def __init__(self, code_snippets_file, descriptions_file, size=None):
         self.code_tokenizer = CuBertHugTokenizer(MODEL_VOCAB)
         self.desc_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
         self.code_vocab_size = self.code_tokenizer.vocab_size
         self.desc_vocab_size = self.desc_tokenizer.vocab_size
+
+        if size is None:
+            size = DATASET_SIZE
+
         # Load data here
         # code_snippets_file = './data/parallel_bodies'
         with open(code_snippets_file) as f:
-            self.code_snippets = [line.rstrip() for line in f][:DATASET_SIZE]
+            self.code_snippets = [line.rstrip() for line in f][:size]
 
         # descriptions_file = './data/parallel_desc'
         with open(descriptions_file, encoding="ISO-8859-1") as f:
-            self.descriptions = [line.rstrip() for line in f][:DATASET_SIZE]
+            self.descriptions = [line.rstrip() for line in f][:size]
 
         assert len(self.code_snippets) == len(
             self.descriptions), 'The code snippets file must have the same size as the descriptions file'
