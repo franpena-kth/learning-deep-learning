@@ -1,4 +1,7 @@
+import random
+
 import numpy
+import torch
 
 
 def sigmoid(x):
@@ -13,3 +16,9 @@ def sigmoid(x):
     """
     s = 1 / (1 + numpy.exp(-x))
     return s
+
+
+def plant_seeds():
+    torch.manual_seed(0)
+    random.seed(0)
+    numpy.random.seed(0)
