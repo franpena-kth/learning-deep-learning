@@ -5,6 +5,7 @@ import torch
 from torch import nn
 
 from unif.unif_data import CodeDescDataset
+from unif.unif_evaluate import evaluate_top_n
 from unif.unif_model import UNIF
 
 
@@ -47,8 +48,10 @@ def train_cycle():
     # print_every = 5000
     # plot_every = 1000
     print_every = 500
+    print_top_n_every = 5000
     plot_every = 500
     embedding_size = 128
+    num_epochs = 10
 
     # Keep track of losses for plotting
     current_loss = 0
@@ -66,20 +69,29 @@ def train_cycle():
     learning_rate = 0.005  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
-    for iter in range(n_iters):
-        # print(iter)
-        tokenized_code, tokenized_desc = dataset[iter]
-        code_embedding, desc_embedding, loss = train(model, loss_function, optimiser, tokenized_code, tokenized_desc)
-        current_loss += loss
+    for epoch in range(num_epochs):
+        print('Epoch: ', epoch)
 
-        # Print iter number, loss, name and guess
-        if (iter + 1) % print_every == 0:
-            print('%d %d%% (%s) %.4f' % (iter + 1, (iter + 1) / n_iters * 100, timeSince(start), current_loss / print_every))
+        for iter in range(n_iters):
+            # print(iter)
+            tokenized_code, tokenized_desc = dataset[iter]
+            code_embedding, desc_embedding, loss = train(model, loss_function, optimiser, tokenized_code, tokenized_desc)
+            current_loss += loss
 
-        # Add current loss avg to list of losses
-        if (iter + 1) % plot_every == 0:
-            all_losses.append(current_loss / plot_every)
-            current_loss = 0
+            # Print iter number, loss, name and guess
+            if (iter + 1) % print_every == 0:
+                print('%d %d%% (%s) %.4f' % (iter + 1, (iter + 1) / n_iters * 100, timeSince(start), current_loss / print_every))
+                # evaluate_top_n(model)
+
+            # Print iter number, loss, name and guess
+            if (iter + 1) % print_top_n_every == 0:
+                evaluate_top_n(model)
+
+            # Add current loss avg to list of losses
+            if (iter + 1) % plot_every == 0:
+                all_losses.append(current_loss / plot_every)
+                current_loss = 0
+        evaluate_top_n(model)
 
     return model, current_loss, all_losses
 
