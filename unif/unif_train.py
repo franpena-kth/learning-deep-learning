@@ -2,6 +2,7 @@
 import time
 import math
 import torch
+import wandb
 from torch import nn
 
 from unif.unif_data import CodeDescDataset
@@ -52,6 +53,9 @@ def train_cycle():
     plot_every = 500
     embedding_size = 128
     num_epochs = 10
+    train_size = None
+    evaluate_size = 100
+    save_path = './unif_model.ckpt'
 
     # Keep track of losses for plotting
     current_loss = 0
@@ -60,19 +64,26 @@ def train_cycle():
     start = time.time()
     code_snippets_file = './data/parallel_bodies'
     descriptions_file = './data/parallel_desc'
-    dataset = CodeDescDataset(code_snippets_file, descriptions_file)
-    n_iters = len(dataset)
-    n_hidden = 128
+    dataset = CodeDescDataset(code_snippets_file, descriptions_file, train_size)
+    num_iters = len(dataset)
+    wandb.init(project='code-search', name='unif', reinit=True)
     model = UNIF(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
 
     loss_function = nn.CosineEmbeddingLoss()
     learning_rate = 0.005  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
+    config = wandb.config
+    config.learning_rate = learning_rate
+    config.embedding_size = embedding_size
+    config.evaluate_size = evaluate_size
+    config.train_size = train_size
+    wandb.watch(model)
+
     for epoch in range(num_epochs):
         print('Epoch: ', epoch)
 
-        for iter in range(n_iters):
+        for iter in range(num_iters):
             # print(iter)
             tokenized_code, tokenized_desc = dataset[iter]
             code_embedding, desc_embedding, loss = train(model, loss_function, optimiser, tokenized_code, tokenized_desc)
@@ -80,18 +91,20 @@ def train_cycle():
 
             # Print iter number, loss, name and guess
             if (iter + 1) % print_every == 0:
-                print('%d %d%% (%s) %.4f' % (iter + 1, (iter + 1) / n_iters * 100, timeSince(start), current_loss / print_every))
-                # evaluate_top_n(model)
+                print('%d %d%% (%s) %.4f' % (iter + 1, (iter + 1) / num_iters * 100, timeSince(start), current_loss / print_every))
 
             # Print iter number, loss, name and guess
             if (iter + 1) % print_top_n_every == 0:
-                evaluate_top_n(model)
+                torch.save(model.state_dict(), save_path)
+                metrics = evaluate_top_n(model, evaluate_size)
+                wandb.log(metrics)
 
             # Add current loss avg to list of losses
             if (iter + 1) % plot_every == 0:
                 all_losses.append(current_loss / plot_every)
                 current_loss = 0
-        evaluate_top_n(model)
+        metrics = evaluate_top_n(model, evaluate_size)
+        wandb.log(metrics)
 
     return model, current_loss, all_losses
 
