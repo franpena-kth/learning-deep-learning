@@ -5,6 +5,8 @@ from torch import nn
 import numpy
 
 from unif.top_n_evaluator import prepare_embeddings_for_topn_evaluation, compute_metrics, output_scores
+from unif.unif_data import CodeDescDataset
+from unif.unif_tokenizer import tokenize_data
 
 
 def get_top_n(n, results):
@@ -15,19 +17,32 @@ def get_top_n(n, results):
     return count / len(results)
 
 
-def evaluate_top_n(code_embeddings, desc_embeddings):
+def evaluate_top_n(model, size=None):
     print("%s: Performing Top-N evaluation" % (time.strftime("%Y/%m/%d-%H:%M:%S")))
+
+    code_snippets_file = './data/parallel_bodies'
+    descriptions_file = './data/parallel_desc'
+    test_dataset = CodeDescDataset(code_snippets_file, descriptions_file, size)
+
+    tokenized_code_data, code_mask, tokenized_desc_data, desc_mask = tokenize_data(test_dataset)
+    print('Tokenized code data', tokenized_code_data.shape)
+    print('Tokenized desc data', tokenized_desc_data.shape)
+
+    code_embedding_data, desc_embedding_data = model(
+        tokenized_code_data, code_mask, tokenized_desc_data, desc_mask)
+    print('Code embedding data', code_embedding_data.shape)
+    print('Desc embedding data', desc_embedding_data.shape)
 
     with torch.no_grad():
         cosine_similarity = nn.CosineSimilarity(dim=1, eps=1e-6)
         results = {}
 
-        for rowid, desc_embedding in enumerate(desc_embeddings):
+        for rowid, desc_embedding in enumerate(desc_embedding_data):
             # Calculate the cosine similarity between the code and desc embeddings
-            code_desc_similarity = cosine_similarity(code_embeddings[rowid].reshape((1, -1)),
+            code_desc_similarity = cosine_similarity(code_embedding_data[rowid].reshape((1, -1)),
                                                      desc_embedding.reshape((1, -1)))
 
-            other_code_embeddings = numpy.delete(code_embeddings, rowid, 0)
+            other_code_embeddings = numpy.delete(code_embedding_data, rowid, 0)
             tiled_desc = torch.Tensor(numpy.tile(desc_embedding, (other_code_embeddings.shape[0], 1)))
 
             # print('Other + tiled', other_code_embeddings.shape, tiled_desc.shape)
@@ -46,6 +61,9 @@ def evaluate_top_n(code_embeddings, desc_embeddings):
         print('Top 5', top_5)
         print('Top 15', top_15)
 
-        queries_ids, relevant_docs, queries_result_list = prepare_embeddings_for_topn_evaluation(code_embeddings, desc_embeddings)
+        queries_ids, relevant_docs, queries_result_list =\
+            prepare_embeddings_for_topn_evaluation(code_embedding_data, desc_embedding_data)
         metrics = compute_metrics(queries_result_list, queries_ids, relevant_docs)
         output_scores(metrics)
+
+        return metrics
