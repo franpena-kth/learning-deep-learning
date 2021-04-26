@@ -22,3 +22,8 @@ def plant_seeds():
     torch.manual_seed(0)
     random.seed(0)
     numpy.random.seed(0)
+
+
+def get_best_device():
+    return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
