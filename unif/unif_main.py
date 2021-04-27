@@ -2,6 +2,7 @@ import time
 
 import utils
 from unif.unif_evaluate import evaluate_top_n
+from unif.unif_plots import plot
 from unif.unif_random_model import RandomModel
 from unif.unif_train import train_cycle
 
@@ -13,6 +14,7 @@ def test_random_model():
 
 def test_unif_model():
     unif_model, current_loss, all_losses = train_cycle()
+    plot(all_losses)
     evaluate_top_n(unif_model)
 
 
