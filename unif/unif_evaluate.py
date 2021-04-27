@@ -65,5 +65,6 @@ def evaluate_top_n(model, size=None):
             prepare_embeddings_for_topn_evaluation(code_embedding_data, desc_embedding_data)
         metrics = compute_metrics(queries_result_list, queries_ids, relevant_docs)
         output_scores(metrics)
+        metrics.update({'Top_1': top_1, 'Top_3': top_3, 'Top_5': top_5, 'Top_15': top_15})
 
         return metrics
