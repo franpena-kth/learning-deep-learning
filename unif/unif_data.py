@@ -1,3 +1,4 @@
+import random
 
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
@@ -40,13 +41,18 @@ class CodeDescDataset(Dataset):
     def __getitem__(self, index):
         # Load the code and the descriptions
         code_snippet = self.code_snippets[index]
-        description = self.descriptions[index]
+        positive_desc = self.descriptions[index]
+        negative_desc = self.descriptions[random.randint(0, self.__len__() - 1)]
 
         # Return a (code_token_ids, desc_token_ids) tuple
         tokenized_code = self.code_tokenizer(code_snippet)
-        tokenized_desc = self.desc_tokenizer(
-            description, padding='max_length', add_special_tokens=True,
+        tokenized_positive_desc = self.desc_tokenizer(
+            positive_desc, padding='max_length', add_special_tokens=True,
+            max_length=MAX_SEQUENCE_LENGTH, return_tensors='pt',
+            truncation=True)
+        tokenized_negative_desc = self.desc_tokenizer(
+            negative_desc, padding='max_length', add_special_tokens=True,
             max_length=MAX_SEQUENCE_LENGTH, return_tensors='pt',
             truncation=True)
 
-        return tokenized_code, tokenized_desc
+        return tokenized_code, tokenized_positive_desc, tokenized_negative_desc

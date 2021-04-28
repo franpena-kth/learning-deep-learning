@@ -1364,26 +1364,26 @@ def tokenize_data(dataset):
     code_token_ids_data = torch.empty(len(dataset), MAX_SEQUENCE_LENGTH, dtype=torch.int)
     desc_token_ids_data = torch.empty(len(dataset), MAX_SEQUENCE_LENGTH, dtype=torch.int)
     code_mask_data = torch.empty(len(dataset), MAX_SEQUENCE_LENGTH, dtype=torch.int)
-    desc_mask_data = torch.empty(len(dataset), MAX_SEQUENCE_LENGTH, dtype=torch.int)
+    positive_desc_mask_data = torch.empty(len(dataset), MAX_SEQUENCE_LENGTH, dtype=torch.int)
 
     for iter in range(len(dataset)):
         # print(iter)
-        tokenized_code, tokenized_desc = dataset[iter]
+        tokenized_code, tokenized_desc, _ = dataset[iter]
 
         code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int)
         code_token_ids = code_token_ids.reshape(1, -1)
         code_mask = torch.tensor(tokenized_code['attention_mask'], dtype=torch.int)
         code_mask = code_mask.reshape(1, -1)
 
-        desc_token_ids = tokenized_desc['input_ids']
-        desc_token_ids = desc_token_ids.reshape(1, -1)
-        desc_mask = tokenized_desc['attention_mask']
-        desc_mask = desc_mask.reshape(1, -1)
+        positive_desc_token_ids = tokenized_desc['input_ids']
+        positive_desc_token_ids = positive_desc_token_ids.reshape(1, -1)
+        positive_desc_mask = tokenized_desc['attention_mask']
+        positive_desc_mask = positive_desc_mask.reshape(1, -1)
 
         code_token_ids_data[iter] = code_token_ids
-        desc_token_ids_data[iter] = desc_token_ids
+        desc_token_ids_data[iter] = positive_desc_token_ids
         code_mask_data[iter] = code_mask
-        desc_mask_data[iter] = desc_mask
+        positive_desc_mask_data[iter] = positive_desc_mask
 
     # print(tokenized_code_data.shape)
     # print(tokenized_desc_data.shape)
@@ -1393,4 +1393,4 @@ def tokenize_data(dataset):
 
     print('Time: ', total_time)
 
-    return code_token_ids_data, code_mask_data, desc_token_ids_data, desc_mask_data
+    return code_token_ids_data, code_mask_data, desc_token_ids_data, positive_desc_mask_data
