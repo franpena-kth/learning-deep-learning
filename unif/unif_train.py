@@ -1,4 +1,3 @@
-
 import time
 import math
 import torch
@@ -38,21 +37,18 @@ def train(
     negative_desc_mask = tokenized_negative_desc['attention_mask']
     negative_desc_mask = negative_desc_mask.reshape(1, -1)
 
-    POSITIVE_SIMILARITY = torch.ones(1)
     code_embedding, positive_desc_embedding = model(
         code_token_ids, code_mask, positive_desc_token_ids, positive_desc_mask)
-    positive_loss = loss_function(code_embedding, positive_desc_embedding, POSITIVE_SIMILARITY)
 
-    NEGATIVE_SIMILARITY = -torch.ones(1)
     code_embedding, negative_desc_embedding = model(
         code_token_ids, code_mask, negative_desc_token_ids, negative_desc_mask)
-    negative_loss = loss_function(code_embedding, negative_desc_embedding, NEGATIVE_SIMILARITY)
 
-    total_loss = positive_loss + negative_loss
-    total_loss.backward()
+    loss = loss_function(code_embedding, positive_desc_embedding, negative_desc_embedding)
+
+    loss.backward()
     optimiser.step()
 
-    return code_embedding, positive_desc_embedding, total_loss.item(), positive_loss.item(), negative_loss.item()
+    return code_embedding, positive_desc_embedding, loss.item()
 
 
 def train_cycle():
@@ -82,7 +78,9 @@ def train_cycle():
     wandb.init(project='code-search', name='unif', reinit=True)
     model = UNIF(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
 
-    loss_function = nn.CosineEmbeddingLoss(margin=0.05)
+    # loss_function = nn.CosineEmbeddingLoss()
+    loss_function = torch.nn.TripletMarginWithDistanceLoss(
+        distance_function=lambda x, y: 1.0 - torch.nn.functional.cosine_similarity(x, y), margin=0.05)
     learning_rate = 0.005  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
@@ -99,22 +97,23 @@ def train_cycle():
         for iter in range(num_iters):
             # print(iter)
             tokenized_code, tokenized_positive_desc, tokenized_negative_desc = dataset[iter]
-            code_embedding, desc_embedding, loss, positive_loss, negative_loss = train(
+            code_embedding, desc_embedding, loss = train(
                 model, loss_function, optimiser,
                 tokenized_code, tokenized_positive_desc, tokenized_negative_desc)
             current_loss += loss
 
             # Print iter number, loss, name and guess
             if (iter + 1) % print_every == 0:
-                print('%d %d%% (%s) %.4f' % (iter + 1, (iter + 1) / num_iters * 100, timeSince(start), current_loss / print_every))
+                print('%d %d%% (%s) %.4f' % (
+                iter + 1, (iter + 1) / num_iters * 100, timeSince(start), current_loss / print_every))
 
             # Print iter number, loss, name and guess
             if (iter + 1) % print_top_n_every == 0:
                 torch.save(model.state_dict(), save_path)
                 metrics = evaluate_top_n(model, evaluate_size)
                 metrics.update({'loss': loss})
-                metrics.update({'positive_loss': positive_loss})
-                metrics.update({'negative_loss': negative_loss})
+                # metrics.update({'positive_loss': positive_loss})
+                # metrics.update({'negative_loss': negative_loss})
                 wandb.log(metrics)
 
             # Add current loss avg to list of losses
