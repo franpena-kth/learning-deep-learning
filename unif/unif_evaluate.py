@@ -20,8 +20,8 @@ def get_top_n(n, results):
 def evaluate_top_n(model, size=None):
     print("%s: Performing Top-N evaluation" % (time.strftime("%Y/%m/%d-%H:%M:%S")))
 
-    code_snippets_file = './data/parallel_bodies'
-    descriptions_file = './data/parallel_desc'
+    code_snippets_file = './data/parallel_bodies_n1000'
+    descriptions_file = './data/parallel_desc_n1000'
     test_dataset = CodeDescDataset(code_snippets_file, descriptions_file, size)
 
     tokenized_code_data, code_mask, tokenized_desc_data, desc_mask = tokenize_data(test_dataset)
