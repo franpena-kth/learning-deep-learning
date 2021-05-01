@@ -79,13 +79,13 @@ def train_cycle(use_wandb=True):
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
     if use_wandb:
-        wandb.init(project='code-search', name='unif-cosine-pos-attention', reinit=True)
+        wandb.init(project='code-search', name='unif-cosine-pos', reinit=True)
         config = wandb.config
         config.learning_rate = learning_rate
         config.embedding_size = embedding_size
         config.evaluate_size = evaluate_size
         config.train_size = train_size
-        wandb.watch(model, log_freq=500)
+        wandb.watch(model, log_freq=plot_every)
         metrics = evaluate_top_n(model, evaluate_size)
         if use_wandb:
             wandb.log(metrics)
