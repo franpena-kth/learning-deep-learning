@@ -42,7 +42,11 @@ class CodeDescDataset(Dataset):
         # Load the code and the descriptions
         code_snippet = self.code_snippets[index]
         positive_desc = self.descriptions[index]
-        negative_desc = self.descriptions[random.randint(0, self.__len__() - 1)]
+        # negative_desc = self.descriptions[random.randint(0, self.__len__() - 1)]
+        negative_candidates = list(range(self.__len__()))
+        negative_candidates.remove(index)
+        negative_index = random.choice(negative_candidates)
+        negative_desc = self.descriptions[negative_index]
 
         # Return a (code_token_ids, desc_token_ids) tuple
         tokenized_code = self.code_tokenizer(code_snippet)
