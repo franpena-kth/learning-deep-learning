@@ -56,6 +56,7 @@ def train_cycle(use_wandb=True):
     plot_every = 500
     embedding_size = 32
     num_epochs = 30
+    margin = 0.05
     train_size = None
     evaluate_size = 100
     save_path = './unif_model.ckpt'
@@ -74,7 +75,7 @@ def train_cycle(use_wandb=True):
     model = UNIFNoAttention(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
     cosine_similarity_function = nn.CosineSimilarity()
 
-    loss_function = nn.CosineEmbeddingLoss(margin=0.05)
+    loss_function = nn.CosineEmbeddingLoss(margin=margin)
     learning_rate = 0.05  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
@@ -84,7 +85,9 @@ def train_cycle(use_wandb=True):
         config.learning_rate = learning_rate
         config.embedding_size = embedding_size
         config.evaluate_size = evaluate_size
-        config.train_size = train_size
+        config.margin = margin
+        config.num_epochs = num_epochs
+        config.train_size = len(dataset)
         wandb.watch(model, log_freq=plot_every)
         metrics = evaluate_top_n(model, evaluate_size)
         if use_wandb:
@@ -98,7 +101,8 @@ def train_cycle(use_wandb=True):
             tokenized_code, tokenized_positive_desc, tokenized_negative_desc =\
                 dataset[iter]
             code_embedding, desc_embedding, loss = train(
-                model, loss_function, optimiser, tokenized_code, tokenized_positive_desc)
+                model, loss_function, optimiser, tokenized_code,
+                okenized_positive_desc)
             current_print_loss += loss
             current_plot_loss += loss
 
