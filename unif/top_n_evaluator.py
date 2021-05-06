@@ -189,23 +189,23 @@ def prepare_embeddings_for_topn_evaluation(code_embeddings, desc_embeddings):
     num_digits = len(str(num_pairs))
 
     code_ids = ['c' + str(i).zfill(num_digits) for i in range(num_pairs)]
-    query_ids = ['q' + str(i).zfill(num_digits) for i in range(num_pairs)]
+    desc_ids = ['d' + str(i).zfill(num_digits) for i in range(num_pairs)]
 
-    relevant_docs = {}
-    for code_id, query_id in zip(code_ids, query_ids):
-        relevant_docs[query_id] = {code_id}
+    relevant_codes = {}
+    for code_id, desc_id in zip(code_ids, desc_ids):
+        relevant_codes[desc_id] = {code_id}
 
     with torch.no_grad():
         cosine_similarity = nn.CosineSimilarity(dim=1, eps=1e-6)
-        queries_result_list = [[] for _ in range(num_pairs)]
+        descriptions_result_list = [[] for _ in range(num_pairs)]
 
         for i in range(num_pairs):
             # query_id = query_ids[i]
             for j in range(num_pairs):
-                code_id ='c' + str(j).zfill(num_digits)
+                code_id = 'c' + str(j).zfill(num_digits)
                 # score = cosine_similarity(code_embeddings[i], desc_embeddings[j])
                 score = cosine_similarity(code_embeddings[i].reshape((1, -1)), desc_embeddings[j].reshape((1, -1))).item()
-                queries_result_list[i].append({'corpus_id': code_id, 'score': score})
+                descriptions_result_list[i].append({'corpus_id': code_id, 'score': score})
 
     # queries_result_list = [
     #     [{'corpus_id': 'd1', 'score': 0.2}, {'corpus_id': 'd2', 'score': 0.5}, {'corpus_id': 'd3', 'score': 0.8},
@@ -219,7 +219,7 @@ def prepare_embeddings_for_topn_evaluation(code_embeddings, desc_embeddings):
     #     'q2': {'d2'}
     # }
 
-    return query_ids, relevant_docs, queries_result_list
+    return desc_ids, relevant_codes, descriptions_result_list
 
 
 def main():
@@ -227,14 +227,14 @@ def main():
     # test_case_1()
     code_embedding = torch.rand(3, 2)
     desc_embedding = torch.rand(3, 2)
-    query_ids, relevant_docs, queries_result_list =\
+    desc_ids, relevant_codes, descriptions_result_list =\
         prepare_embeddings_for_topn_evaluation(code_embedding, desc_embedding)
 
-    print('Query IDs', query_ids)
-    print('Relevant docs', relevant_docs)
-    print('Queries result list', queries_result_list)
+    print('Description IDs', desc_ids)
+    print('Relevant codes', relevant_codes)
+    print('Descriptions result list', descriptions_result_list)
 
-    metrics = compute_metrics(queries_result_list, query_ids, relevant_docs)
+    metrics = compute_metrics(descriptions_result_list, desc_ids, relevant_codes)
     output_scores(metrics)
 
     # test_case_2()
