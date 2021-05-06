@@ -49,7 +49,7 @@ def evaluate_top_n(model, size=None):
 
             # Calculate the cosine similarity between the description vector and all the code snippets excepting the code that matches the desc
             ress = cosine_similarity(other_code_embeddings, tiled_desc)
-            results[rowid] = len(ress[ress > code_desc_similarity])
+            results[rowid] = len(ress[ress >= code_desc_similarity])
 
         top_1 = get_top_n(1, results)
         top_3 = get_top_n(3, results)
