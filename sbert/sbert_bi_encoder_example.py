@@ -1,11 +1,15 @@
 """
 This examples show how to train a Bi-Encoder for the MS Marco dataset (https://github.com/microsoft/MSMARCO-Passage-Ranking).
+
 The queries and passages are passed independently to the transformer network to produce fixed sized embeddings.
 These embeddings can then be compared using cosine-similarity to find matching passages for a given query.
+
 For training, we use MultipleNegativesRankingLoss. There, we pass triplets in the format:
 (query, positive_passage, negative_passage)
+
 Negative passage are hard negative examples, that where retrieved by lexical search. We use the negative
 passages (the triplets) that are provided by the MS MARCO dataset.
+
 Running this script:
 python train_bi-encoder.py
 """
@@ -28,7 +32,8 @@ logging.basicConfig(format='%(asctime)s - %(message)s',
 #### /print debug information to stdout
 
 # The  model we want to fine-tune
-model_name = 'distilroberta-base'
+# model_name = 'distilroberta-base'
+model_name = 'sshleifer/tiny-distilroberta-base'
 
 train_batch_size = 64           #Increasing the train batch size improves the model performance, but requires more GPU memory
 
@@ -87,10 +92,11 @@ with open(queries_filepath, 'r', encoding='utf8') as fIn:
 # msmarco-qidpidtriples.rnd-shuf.train-eval.tsv.gz and msmarco-qidpidtriples.rnd-shuf.train.tsv.gz is a randomly
 # shuffled version of qidpidtriples.train.full.2.tsv.gz from the MS Marco website
 # We extracted in the train-eval split 500 random queries that can be used for evaluation during training
-train_eval_filepath = os.path.join(data_folder, 'msmarco-qidpidtriples.rnd-shuf.train-eval.tsv.gz')
-if not os.path.exists(train_eval_filepath):
-    logging.info("Download "+os.path.basename(train_eval_filepath))
-    util.http_get('https://sbert.net/datasets/msmarco-qidpidtriples.rnd-shuf.train-eval.tsv.gz', train_eval_filepath)
+# train_eval_filepath = os.path.join(data_folder, 'msmarco-qidpidtriples.rnd-shuf.train-eval.tsv.gz')
+train_eval_filepath = os.path.join(data_folder, 'msmarco-qidpidtriples.rnd-shuf.train-eval.tsv')
+# if not os.path.exists(train_eval_filepath):
+#     logging.info("Download "+os.path.basename(train_eval_filepath))
+#     util.http_get('https://sbert.net/datasets/msmarco-qidpidtriples.rnd-shuf.train-eval.tsv.gz', train_eval_filepath)
 
 dev_queries = {}
 dev_corpus = {}
@@ -98,7 +104,8 @@ dev_rel_docs = {}
 
 num_negatives = defaultdict(int)
 
-with gzip.open(train_eval_filepath, 'rt') as fIn:
+# with gzip.open(train_eval_filepath, 'rt') as fIn:
+with open(train_eval_filepath, 'r') as fIn:
     for line in fIn:
         qid, pos_id, neg_id = line.strip().split()
 
@@ -125,10 +132,10 @@ logging.info("Dev Corpus: {}".format(len(dev_corpus)))
 ir_evaluator = evaluation.InformationRetrievalEvaluator(dev_queries, dev_corpus, dev_rel_docs, name='ms-marco-train_eval')
 
 # Read our training file. qidpidtriples consists of triplets (qid, positive_pid, negative_pid)
-train_filepath = os.path.join(data_folder, 'msmarco-qidpidtriples.rnd-shuf.train.tsv.gz')
-if not os.path.exists(train_filepath):
-    logging.info("Download "+os.path.basename(train_filepath))
-    util.http_get('https://sbert.net/datasets/msmarco-qidpidtriples.rnd-shuf.train.tsv.gz', train_filepath)
+train_filepath = os.path.join(data_folder, 'msmarco-qidpidtriples.rnd-shuf.train-eval.tsv')
+# if not os.path.exists(train_filepath):
+#     logging.info("Download "+os.path.basename(train_filepath))
+#     util.http_get('https://sbert.net/datasets/msmarco-qidpidtriples.rnd-shuf.train-eval.tsv.gz', train_filepath)
 
 
 #We load the qidpidtriples file on-the-fly by using a custom IterableDataset class
@@ -140,7 +147,7 @@ class TripletsDataset(IterableDataset):
         self.triplets_file = triplets_file
 
     def __iter__(self):
-        with gzip.open(self.triplets_file, 'rt') as fIn:
+        with open(self.triplets_file, 'r') as fIn:
             for line in fIn:
                 qid, pos_id, neg_id = line.strip().split()
                 query_text = self.queries[qid]
@@ -149,7 +156,8 @@ class TripletsDataset(IterableDataset):
                 yield InputExample(texts=[query_text, pos_text, neg_text])
 
     def __len__(self):
-        return 397226027
+        # return 397226027
+        return 10000
 
 # For training the SentenceTransformer model, we need a dataset, a dataloader, and a loss used for training.
 train_dataset = TripletsDataset(model=model, queries=queries, corpus=corpus, triplets_file=train_filepath)
