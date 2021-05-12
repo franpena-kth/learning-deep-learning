@@ -25,7 +25,7 @@ def train(
     model.train()
     model.zero_grad()
 
-    code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int)
+    code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int64)
     code_token_ids = code_token_ids.reshape(1, -1)
     positive_desc_token_ids = tokenized_positive_desc['input_ids']
     positive_desc_token_ids = positive_desc_token_ids.reshape(1, -1)
@@ -66,7 +66,7 @@ def train_cycle(use_wandb=True):
     print_every = 50
     plot_every = 500
     embedding_size = 32
-    num_epochs = 500
+    num_epochs = 20
     margin = 0.5
     train_size = None
     evaluate_size = 100
@@ -78,8 +78,8 @@ def train_cycle(use_wandb=True):
     all_losses = []
 
     start = time.time()
-    code_snippets_file = './data/parallel_bodies_n1000'
-    descriptions_file = './data/parallel_desc_n1000'
+    code_snippets_file = './data/parallel_bodies'
+    descriptions_file = './data/parallel_desc'
     dataset = CodeDescDataset(code_snippets_file, descriptions_file, train_size)
     num_iters = len(dataset)
     # model = UNIF(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
@@ -91,9 +91,10 @@ def train_cycle(use_wandb=True):
         distance_function=lambda x, y: 1.0 - functional.cosine_similarity(x, y), margin=margin)
     learning_rate = 0.05  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    # optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     if use_wandb:
-        wandb.init(project='code-search', name='unif-triplet-cosine-commit', reinit=True)
+        wandb.init(project='code-search', name='unif-triplet-cosine', reinit=True)
         config = wandb.config
         config.learning_rate = learning_rate
         config.embedding_size = embedding_size
