@@ -5,6 +5,7 @@ import wandb
 from torch import nn
 from torch.nn import functional
 
+import utils
 from unif.unif_data import CodeDescDataset
 from unif.unif_evaluate import evaluate_top_n
 from unif.unif_model import UNIF
@@ -27,17 +28,23 @@ def train(
 
     code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int64)
     code_token_ids = code_token_ids.reshape(1, -1)
+    code_token_ids.to(utils.get_best_device())
     positive_desc_token_ids = tokenized_positive_desc['input_ids']
     positive_desc_token_ids = positive_desc_token_ids.reshape(1, -1)
+    positive_desc_token_ids.to(utils.get_best_device())
     negative_desc_token_ids = tokenized_negative_desc['input_ids']
     negative_desc_token_ids = negative_desc_token_ids.reshape(1, -1)
+    negative_desc_token_ids.to(utils.get_best_device())
 
     code_mask = torch.tensor(tokenized_code['attention_mask'], dtype=torch.int)
     code_mask = code_mask.reshape(1, -1)
+    code_mask.to(utils.get_best_device())
     positive_desc_mask = tokenized_positive_desc['attention_mask']
     positive_desc_mask = positive_desc_mask.reshape(1, -1)
+    positive_desc_mask.to(utils.get_best_device())
     negative_desc_mask = tokenized_negative_desc['attention_mask']
     negative_desc_mask = negative_desc_mask.reshape(1, -1)
+    negative_desc_mask.to(utils.get_best_device())
 
     code_embedding, positive_desc_embedding = model(
         code_token_ids, code_mask, positive_desc_token_ids, positive_desc_mask)
@@ -84,11 +91,13 @@ def train_cycle(use_wandb=True):
     num_iters = len(dataset)
     # model = UNIF(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
     model = UNIFNoAttention(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
+    model.to(utils.get_best_device())
     cosine_similarity_function = nn.CosineSimilarity()
 
     # loss_function = nn.CosineEmbeddingLoss()
     loss_function = torch.nn.TripletMarginWithDistanceLoss(
         distance_function=lambda x, y: 1.0 - functional.cosine_similarity(x, y), margin=margin)
+    loss_function.to(utils.get_best_device())
     learning_rate = 0.05  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
     # optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)

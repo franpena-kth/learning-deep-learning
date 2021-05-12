@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import numpy
 
+import utils
 from unif.top_n_evaluator import prepare_embeddings_for_topn_evaluation, compute_metrics, output_scores
 from unif.unif_data import CodeDescDataset
 from unif.unif_tokenizer import tokenize_data
@@ -25,8 +26,10 @@ def evaluate_top_n(model, size=None):
     test_dataset = CodeDescDataset(code_snippets_file, descriptions_file, size)
 
     tokenized_code_data, code_mask, tokenized_desc_data, desc_mask = tokenize_data(test_dataset)
-    tokenized_code_data = tokenized_code_data.to(torch.int64)
-    tokenized_desc_data = tokenized_desc_data.to(torch.int64)
+    tokenized_code_data = tokenized_code_data.to(torch.int64).to(utils.get_best_device())
+    tokenized_desc_data = tokenized_desc_data.to(torch.int64).to(utils.get_best_device())
+    code_mask.to(utils.get_best_device())
+    desc_mask.to(utils.get_best_device())
     print('Tokenized code data', tokenized_code_data.shape)
     print('Tokenized desc data', tokenized_desc_data.shape)
 
