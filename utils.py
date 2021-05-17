@@ -25,5 +25,5 @@ def plant_seeds():
 
 
 def get_best_device():
-    return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

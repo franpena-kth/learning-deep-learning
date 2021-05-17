@@ -28,8 +28,8 @@ def evaluate_top_n(model, size=None):
     tokenized_code_data, code_mask, tokenized_desc_data, desc_mask = tokenize_data(test_dataset)
     tokenized_code_data = tokenized_code_data.to(torch.int64).to(utils.get_best_device())
     tokenized_desc_data = tokenized_desc_data.to(torch.int64).to(utils.get_best_device())
-    code_mask.to(utils.get_best_device())
-    desc_mask.to(utils.get_best_device())
+    code_mask = code_mask.to(utils.get_best_device())
+    desc_mask = desc_mask.to(utils.get_best_device())
     print('Tokenized code data', tokenized_code_data.shape)
     print('Tokenized desc data', tokenized_desc_data.shape)
 
