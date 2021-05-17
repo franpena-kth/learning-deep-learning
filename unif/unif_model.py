@@ -3,6 +3,8 @@ import math
 import torch
 from torch import nn
 
+import utils
+
 
 class UNIF(nn.Module):
 
@@ -13,12 +15,12 @@ class UNIF(nn.Module):
         # attention_weights = torch.nn.init.uniform_(
         #     torch.empty(embedding_size, 1, dtype=torch.float32, requires_grad=True))
         # self.attention_weights = nn.parameter.Parameter(attention_weights, requires_grad=True)
-        self.attention_weights = nn.Parameter(torch.Tensor(embedding_size, 1))
+        self.attention_weights = nn.Parameter(torch.Tensor(embedding_size, 1).to(utils.get_best_device()), requires_grad=True)
         bound = 1 / math.sqrt(embedding_size)
         nn.init.uniform_(self.attention_weights, -bound, bound)
         self.softmax = nn.Softmax(dim=-1)
         # self.minus_inf = torch.tensor([[-float('inf')]], device=get_best_device())  # 1 x 1
-        self.minus_inf = torch.tensor([[-float('inf')]])  # 1 x 1
+        self.minus_inf = torch.tensor([[-float('inf')]]).to(utils.get_best_device())  # 1 x 1
 
     def forward(self, code_token_ids, code_mask, desc_token_ids, desc_mask):
 
