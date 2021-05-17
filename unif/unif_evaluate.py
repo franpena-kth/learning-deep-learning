@@ -47,13 +47,13 @@ def evaluate_top_n(model, size=None):
             code_desc_similarity = cosine_similarity(code_embedding_data[rowid].reshape((1, -1)),
                                                      desc_embedding.reshape((1, -1)))
 
-            other_code_embeddings = numpy.delete(code_embedding_data, rowid, 0)
-            tiled_desc = torch.Tensor(numpy.tile(desc_embedding, (other_code_embeddings.shape[0], 1)))
+            other_code_embeddings = numpy.delete(code_embedding_data.cpu(), rowid, 0)
+            tiled_desc = torch.Tensor(numpy.tile(desc_embedding.cpu(), (other_code_embeddings.shape[0], 1)))
 
             # print('Other + tiled', other_code_embeddings.shape, tiled_desc.shape)
 
             # Calculate the cosine similarity between the description vector and all the code snippets excepting the code that matches the desc
-            ress = cosine_similarity(other_code_embeddings, tiled_desc)
+            ress = torch.Tensor(cosine_similarity(other_code_embeddings, tiled_desc)).to(utils.get_best_device())
             results[rowid] = len(ress[ress >= code_desc_similarity])
 
         top_1 = get_top_n(1, results)
