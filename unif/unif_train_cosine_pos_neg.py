@@ -7,7 +7,7 @@ from torch import nn
 
 from unif.unif_data import CodeDescDataset
 from unif.unif_evaluate import evaluate_top_n
-from unif.unif_model import UNIF
+from unif.unif_model import UNIFAttention
 from unif.unif_model_no_attention import UNIFNoAttention
 
 

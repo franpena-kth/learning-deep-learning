@@ -8,7 +8,7 @@ from torch.nn import functional
 import utils
 from unif.unif_data import CodeDescDataset
 from unif.unif_evaluate import evaluate_top_n
-from unif.unif_model import UNIF
+from unif.unif_model import UNIFAttention
 from unif.unif_model_no_attention import UNIFNoAttention
 
 
@@ -83,21 +83,22 @@ def train_cycle(use_wandb=True):
     descriptions_file = './data/parallel_desc'
     dataset = CodeDescDataset(code_snippets_file, descriptions_file, train_size)
     num_iters = len(dataset)
-    # model = UNIF(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
-    model = UNIFNoAttention(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
+    model = UNIFAttention(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
+    # model = UNIFNoAttention(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
     model = model.to(utils.get_best_device())
     cosine_similarity_function = nn.CosineSimilarity()
 
     # loss_function = nn.CosineEmbeddingLoss()
     loss_function = torch.nn.TripletMarginWithDistanceLoss(
         distance_function=lambda x, y: 1.0 - functional.cosine_similarity(x, y), margin=margin)
-    loss_function.to(utils.get_best_device())
+    loss_function = loss_function.to(utils.get_best_device())
     learning_rate = 0.05  # If you set this too high, it might explode. If too low, it might not learn
     optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
     # optimiser = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     if use_wandb:
-        wandb.init(project='code-search', name='unif-triplet-cosine', reinit=True)
+        name = model.__class__.__name__.lower() + '-triplet-cosine'
+        wandb.init(project='code-search', name=name, reinit=True)
         config = wandb.config
         config.learning_rate = learning_rate
         config.embedding_size = embedding_size

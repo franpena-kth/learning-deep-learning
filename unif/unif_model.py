@@ -6,16 +6,16 @@ from torch import nn
 import utils
 
 
-class UNIF(nn.Module):
+class UNIFAttention(nn.Module):
 
     def __init__(self, code_vocab_size, desc_vocab_size, embedding_size):
-        super(UNIF, self).__init__()
+        super(UNIFAttention, self).__init__()
         self.code_embedding_layer = nn.Embedding(num_embeddings=code_vocab_size, embedding_dim=embedding_size)
         self.desc_embedding_layer = nn.Embedding(num_embeddings=desc_vocab_size, embedding_dim=embedding_size)
         # attention_weights = torch.nn.init.uniform_(
         #     torch.empty(embedding_size, 1, dtype=torch.float32, requires_grad=True))
         # self.attention_weights = nn.parameter.Parameter(attention_weights, requires_grad=True)
-        self.attention_weights = nn.Parameter(torch.Tensor(embedding_size, 1).to(utils.get_best_device()), requires_grad=True)
+        self.attention_weights = nn.Parameter(torch.Tensor(embedding_size, 1).to(utils.get_best_device()))
         bound = 1 / math.sqrt(embedding_size)
         nn.init.uniform_(self.attention_weights, -bound, bound)
         self.softmax = nn.Softmax(dim=-1)

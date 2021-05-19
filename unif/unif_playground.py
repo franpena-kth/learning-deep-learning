@@ -5,7 +5,7 @@ import torch
 
 import utils
 from unif.unif_data import CodeDescDataset
-from unif.unif_model import UNIF
+from unif.unif_model import UNIFAttention
 from unif.unif_tokenizer import tokenize_data
 
 
@@ -16,7 +16,7 @@ def load_unif_model():
     train_size = 11
     embedding_size = 128
     dataset = CodeDescDataset(code_snippets_file, descriptions_file, train_size)
-    model = UNIF(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
+    model = UNIFAttention(dataset.code_vocab_size, dataset.desc_vocab_size, embedding_size)
     model.load_state_dict(torch.load(load_path))
 
     code_snippet = dataset.code_snippets[3]
