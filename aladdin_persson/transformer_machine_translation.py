@@ -3,10 +3,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import spacy
-from aladdin_utils import bleu, save_checkpoint, load_checkpoint
 from torch.utils.tensorboard import SummaryWriter
 from torchtext.datasets import Multi30k
-from torchtext.data import Field, BucketIterator
+from torchtext.data import Field, BucketIterator, bleu_score
 import de_core_news_md
 import en_core_web_sm
 
@@ -35,7 +34,7 @@ english.build_vocab(train_data, max_size=10000, min_freq=2)
 
 def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Load german tokenizer
-    spacy_ger = de_core_news_md.load()
+    spacy_ger = spacy.load("de")
 
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
     if type(sentence) == str:
@@ -69,6 +68,34 @@ def translate_sentence(model, sentence, german, english, device, max_length=50):
     translated_sentence = [english.vocab.itos[idx] for idx in outputs]
     # remove start token
     return translated_sentence[1:]
+
+
+def bleu(data, model, german, english, device):
+    targets = []
+    outputs = []
+
+    for example in data:
+        src = vars(example)["src"]
+        trg = vars(example)["trg"]
+
+        prediction = translate_sentence(model, src, german, english, device)
+        prediction = prediction[:-1]  # remove <eos> token
+
+        targets.append([trg])
+        outputs.append(prediction)
+
+    return bleu_score(outputs, targets)
+
+
+def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
+    print("=> Saving checkpoint")
+    torch.save(state, filename)
+
+
+def load_checkpoint(checkpoint, model, optimizer):
+    print("=> Loading checkpoint")
+    model.load_state_dict(checkpoint["state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer"])
 
 
 class Transformer(nn.Module):
@@ -151,10 +178,10 @@ class Transformer(nn.Module):
 # Setup the training phase
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 load_model = False
-save_model = False
+save_model = True
 
 # Training hyperparameters
-num_epochs = 5
+num_epochs = 100
 learning_rate = 3e-4
 batch_size = 32
 
