@@ -1,20 +1,21 @@
+import io
 import time
+from collections import Counter
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchtext.datasets import Multi30k
-from torchtext.data import Field, BucketIterator
+from torchtext.data import Field, BucketIterator, get_tokenizer
 import numpy as np
 import spacy
 import random
 from torch.utils.tensorboard import SummaryWriter  # to print to tensorboard
-from transformers import AutoTokenizer
+from torchtext.vocab import Vocab
 
 import utils
-from unif.unif_data import CodeDescDataset
-from unif.unif_tokenizer import CuBertHugTokenizer
+from aladdin_persson.aladdin_utils import translate_sentence, bleu, save_checkpoint, load_checkpoint
 
 torch.manual_seed(0)
 random.seed(0)
@@ -123,12 +124,34 @@ class Seq2Seq(nn.Module):
         return outputs
 
 
+def prepare_data():
+    spacy_ger = de_core_news_md.load()
+    spacy_eng = en_core_web_sm.load()
+
+    def tokenize_ger(text):
+        return [tok.text for tok in spacy_ger.tokenizer(text)]
+
+    def tokenize_eng(text):
+        return [tok.text for tok in spacy_eng.tokenizer(text)]
+
+    german = Field(tokenize=tokenize_ger, lower=True, init_token="<sos>", eos_token="<eos>")
+
+    english = Field(
+        tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
+    )
+
+    train_data, valid_data, test_data = Multi30k.splits(
+        exts=(".de", ".en"), fields=(german, english)
+    )
+
+    german.build_vocab(train_data, max_size=10000, min_freq=2)
+    english.build_vocab(train_data, max_size=10000, min_freq=2)
+
+    return train_data, valid_data, test_data, german, english
+
+
 def train():
-    code_snippets_file = '/Users/frape/Datasets/uncompressed/code-docstring-corpus-master/V2/parallel/parallel_bodies'
-    descriptions_file = '/Users/frape/Datasets/uncompressed/code-docstring-corpus-master/V2/parallel/parallel_desc'
-    train_size = 5000
-    dataset = CodeDescDataset(code_snippets_file, descriptions_file, train_size)
-    num_iters = len(dataset)
+    train_data, valid_data, test_data, german, english = prepare_data()
 
     ### We're ready to define everything we need for training our Seq2Seq model ###
 
@@ -137,17 +160,15 @@ def train():
     learning_rate = 0.001
     batch_size = 64
 
-    data_loader = DataLoader(dataset, batch_size=batch_size)
-
     # Model hyperparameters
     load_model = False
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    input_size_encoder = dataset.code_vocab_size
-    input_size_decoder = dataset.desc_vocab_size
-    output_size = dataset.desc_vocab_size
-    encoder_embedding_size = 30
-    decoder_embedding_size = 30
-    hidden_size = 128  # Needs to be the same for both RNN's
+    input_size_encoder = len(german.vocab)
+    input_size_decoder = len(english.vocab)
+    output_size = len(english.vocab)
+    encoder_embedding_size = 300
+    decoder_embedding_size = 300
+    hidden_size = 1024  # Needs to be the same for both RNN's
     num_layers = 2
     enc_dropout = 0.5
     dec_dropout = 0.5
@@ -156,13 +177,13 @@ def train():
     writer = SummaryWriter(f"runs/loss_plot")
     step = 0
 
-    # train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
-    #     (train_data, valid_data, test_data),
-    #     batch_size=batch_size,
-    #     sort_within_batch=True,
-    #     sort_key=lambda x: len(x.src),
-    #     device=device,
-    # )
+    train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
+        (train_data, valid_data, test_data),
+        batch_size=batch_size,
+        sort_within_batch=True,
+        sort_key=lambda x: len(x.src),
+        device=device,
+    )
 
     encoder_net = Encoder(
         input_size_encoder, encoder_embedding_size, hidden_size, num_layers, enc_dropout
@@ -177,59 +198,44 @@ def train():
         dec_dropout,
     ).to(device)
 
-    model = Seq2Seq(encoder_net, decoder_net, dataset.desc_vocab_size, device).to(device)
+    model = Seq2Seq(encoder_net, decoder_net, len(english.vocab), device).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # pad_idx = english.vocab.stoi["<pad>"]
-    criterion = nn.CrossEntropyLoss()
+    pad_idx = english.vocab.stoi["<pad>"]
+    criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
-    # if load_model:
-    #     load_checkpoint(torch.load("my_checkpoint_2_2.pth.tar"), model, optimizer)
+    if load_model:
+        load_checkpoint(torch.load("my_checkpoint_2_2.pth.tar"), model, optimizer)
 
-    # sentence = "ein boot mit mehreren männern darauf wird von einem großen pferdegespann ans ufer gezogen."
+
+    sentence = "ein boot mit mehreren männern darauf wird von einem großen pferdegespann ans ufer gezogen."
 
     for epoch in range(num_epochs):
         print(f"{time.strftime('%Y/%m/%d-%H:%M:%S')}: [Epoch {epoch} / {num_epochs}]")
 
-        # checkpoint = {"state_dict": model.state_dict(), "optimizer": optimizer.state_dict()}
-        # save_checkpoint(checkpoint, filename='seq2seq_code_desc_model_checkpoint.pth.tar')
+        checkpoint = {"state_dict": model.state_dict(), "optimizer": optimizer.state_dict()}
+        save_checkpoint(checkpoint, filename='seq2seq_code_desc_model_checkpoint.pth.tar')
 
         model.eval()
 
-        # code_snippet = "DCSP for body_charset in ('US-ASCII', 'ISO-8859-1', 'UTF-8'): DCNL DCSP  DCSP try: DCNL DCSP  DCSP  DCSP BODY.encode(body_charset) DCNL DCSP  DCSP except UnicodeError: DCNL DCSP  DCSP  DCSP pass DCNL DCSP  DCSP else: DCNL DCSP  DCSP  DCSP break DCNL DCSP msg = MIMEText(BODY.encode(body_charset), 'html', body_charset) DCNL DCSP msg['From'] = SENDER DCNL DCSP msg['To'] = TO DCNL DCSP msg['Subject'] = SUBJECT DCNL DCSP SMTP_PORT = 587 DCNL DCSP session = smtplib.SMTP(SMTP_SERVER, SMTP_PORT) DCNL DCSP session.starttls() DCNL DCSP session.login(FROM, PASSWORD) DCNL DCSP session.sendmail(SENDER, TO, msg.as_string()) DCNL DCSP session.quit()"
-        code_snippet = "DCSP process = tools.subprocess_call(['sleep', '1']) DCNL DCSP time.sleep(1) DCNL DCSP assert (process is None)"
         translated_sentence = translate_sentence(
-            model, code_snippet, device, max_length=50
+            model, sentence, german, english, device, max_length=50
         )
+
         print(f"Translated example sentence: \n {translated_sentence}")
 
         model.train()
 
-        for batch_idx, batch in enumerate(data_loader):
+        for batch_idx, batch in enumerate(train_iterator):
             # Get input and targets and get to cuda
-            # inp_data = batch.src.to(device)
-            # target = batch.trg.to(device)
-
-            tokenized_code, tokenized_positive_desc, _ = \
-                dataset[batch_idx]
-
-            code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int64)
-            code_token_ids = code_token_ids.reshape(1, -1).to(utils.get_best_device())
-            code_token_ids = code_token_ids.transpose(0, 1)
-
-            positive_desc_token_ids = tokenized_positive_desc['input_ids']
-            positive_desc_token_ids = positive_desc_token_ids.reshape(1, -1).to(utils.get_best_device())
-            positive_desc_token_ids = positive_desc_token_ids.transpose(0, 1)
-
-            # print(type(code_token_ids))
-            # print(code_token_ids.shape)
-            # print(code_token_ids)
+            inp_data = batch.src.to(device)
+            target = batch.trg.to(device)
 
             # Forward prop
-            output = model(code_token_ids, positive_desc_token_ids)
+            output = model(inp_data, target)
 
-            # print('Input', code_token_ids.shape)
-            # print('Target', positive_desc_token_ids.shape)
+            # print('Input', inp_data.shape)
+            # print('Target', target.shape)
             # print('Output', output.shape)
 
             # Output is of shape (trg_len, batch_size, output_dim) but Cross Entropy Loss
@@ -239,10 +245,10 @@ def train():
             # our cost function, so we need to do some reshapin. While we're at it
             # Let's also remove the start token while we're at it
             output = output[1:].reshape(-1, output.shape[2])
-            positive_desc_token_ids = positive_desc_token_ids[1:].reshape(-1)
+            target = target[1:].reshape(-1)
 
             optimizer.zero_grad()
-            loss = criterion(output, positive_desc_token_ids)
+            loss = criterion(output, target)
 
             # Back prop
             loss.backward()
@@ -259,76 +265,8 @@ def train():
             # print("Training loss", loss)
             step += 1
 
-    # score = bleu(test_data[1:100], model, german, english, device)
-    # print(f"Bleu score {score*100:.2f}")
-
-
-def bert_detokenizer(sentence_token_ids):
-    desc_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-
-    return desc_tokenizer.decode(sentence_token_ids[0])
-
-
-def translate_sentence(model, sentence, device, max_length=50):
-    # print(sentence)
-
-    # sys.exit()
-
-    # Load german tokenizer
-    # spacy_ger = spacy.load("de")
-    # spacy_ger = spacy.load("de_core_news_md")
-
-    # Create tokens using spacy and everything in lower case (which is what our vocab is)
-    # if type(sentence) == str:
-    #     tokens = [token.text.lower() for token in spacy_ger(sentence)]
-    # else:
-    #     tokens = [token.lower() for token in sentence]
-
-    # print(tokens)
-
-    # sys.exit()
-    # Add <SOS> and <EOS> in beginning and end respectively
-    # tokens.insert(0, german.init_token)
-    # tokens.append(german.eos_token)
-
-    # Go through each german token and convert to an index
-    # text_to_indices = [german.vocab.stoi[token] for token in tokens]
-
-    # Convert to Tensor
-    # sentence_tensor = torch.LongTensor(text_to_indices).unsqueeze(1).to(device)
-
-    MODEL_VOCAB = '/Users/frape/Courses/Coursera-Deep-Learning/src/vocabulary/python_vocabulary.txt'
-    code_tokenizer = CuBertHugTokenizer(MODEL_VOCAB)
-    tokenized_code = code_tokenizer(sentence)
-    code_token_ids = torch.tensor(tokenized_code['input_ids'], dtype=torch.int64)
-    code_token_ids = code_token_ids.reshape(1, -1).to(utils.get_best_device())
-    code_token_ids = code_token_ids.transpose(0, 1)
-
-    # Build encoder hidden, cell state
-    with torch.no_grad():
-        hidden, cell = model.encoder(code_token_ids)
-
-    # outputs = [english.vocab.stoi["<sos>"]]
-    outputs = [0]
-
-    for _ in range(max_length):
-        previous_word = torch.LongTensor([outputs[-1]]).to(device)
-
-        with torch.no_grad():
-            output, hidden, cell = model.decoder(previous_word, hidden, cell)
-            best_guess = output.argmax(1).item()
-
-        outputs.append(best_guess)
-
-        # Model predicts it's the end of the sentence
-        # if output.argmax(1).item() == english.vocab.stoi["<eos>"]:
-        #     break
-
-    translated_sentence = bert_detokenizer(outputs)
-
-    # remove start token
-    return translated_sentence[1:]
-
+    score = bleu(test_data[1:100], model, german, english, device)
+    print(f"Bleu score {score*100:.2f}")
 
 
 def main():
