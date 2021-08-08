@@ -46,6 +46,11 @@ from collections import Counter
 from torchtext.legacy.vocab import Vocab
 from torchtext.utils import download_from_url, extract_archive
 import io
+import time
+
+
+print(f"{time.strftime('%Y/%m/%d-%H:%M:%S')}: Process started")
+
 
 url_base = 'https://raw.githubusercontent.com/multi30k/dataset/master/data/task1/raw/'
 train_urls = ('train.de.gz', 'train.en.gz')
@@ -108,6 +113,9 @@ BATCH_SIZE = 128
 PAD_IDX = de_vocab['<pad>']
 BOS_IDX = de_vocab['<bos>']
 EOS_IDX = de_vocab['<eos>']
+PAD_TOKEN = '<pad>'
+BOS_TOKEN = '<bos>'
+EOS_TOKEN = '<eos>'
 
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
@@ -330,6 +338,50 @@ class Seq2Seq(nn.Module):
         return outputs
 
 
+# Source: https://github.com/bentrevett/pytorch-seq2seq/blob/master/4%20-%20Packed%20Padded%20Sequences%2C%20Masking%2C%20Inference%20and%20BLEU.ipynb
+def translate_sentence(sentence, src_vocab, trg_vocab, model, device, max_len=50):
+    model.eval()
+
+    if isinstance(sentence, str):
+        # nlp = spacy.load('de')
+        nlp = get_tokenizer('spacy', language='de_core_news_sm')
+        tokens = [token.lower() for token in nlp(sentence)]
+    else:
+        tokens = [token.lower() for token in sentence]
+
+    tokens = [BOS_TOKEN] + tokens + [EOS_TOKEN]
+
+    src_indexes = [src_vocab.stoi[token] for token in tokens]
+
+    src_tensor = torch.LongTensor(src_indexes).unsqueeze(1).to(device)
+
+    # src_len = torch.LongTensor([len(src_indexes)])
+
+    with torch.no_grad():
+        encoder_outputs, hidden = model.encoder(src_tensor)
+
+    trg_indexes = [trg_vocab.stoi[BOS_TOKEN]]
+
+    for i in range(max_len):
+
+        trg_tensor = torch.LongTensor([trg_indexes[-1]]).to(device)
+
+        with torch.no_grad():
+            output, hidden = model.decoder(trg_tensor, hidden, encoder_outputs)
+
+        pred_token = output.argmax(1).item()
+
+        trg_indexes.append(pred_token)
+
+        if pred_token == trg_vocab.stoi[EOS_TOKEN]:
+            break
+
+    trg_tokens = [trg_vocab.itos[i] for i in trg_indexes]
+
+    return trg_tokens[1:]
+    # return trg_tokens[1:], attentions[:len(trg_tokens) - 1]
+
+
 INPUT_DIM = len(de_vocab)
 OUTPUT_DIM = len(en_vocab)
 # ENC_EMB_DIM = 256
@@ -459,12 +511,19 @@ N_EPOCHS = 10
 CLIP = 1
 
 best_valid_loss = float('inf')
+sentence = "ein boot mit mehreren männern darauf wird von einem großen pferdegespann ans ufer gezogen."
 
 for epoch in range(N_EPOCHS):
     start_time = time.time()
 
     train_loss = train(model, train_iter, optimizer, criterion, CLIP)
     valid_loss = evaluate(model, valid_iter, criterion)
+
+    translated_sentence = translate_sentence(
+        sentence, de_vocab, en_vocab, model, device, max_len=50
+    )
+
+    print(f"Translated example sentence: \n {translated_sentence}")
 
     end_time = time.time()
 
@@ -477,6 +536,8 @@ for epoch in range(N_EPOCHS):
 test_loss = evaluate(model, test_iter, criterion)
 
 print(f'| Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f} |')
+
+print(f"{time.strftime('%Y/%m/%d-%H:%M:%S')}: Process finished")
 
 ######################################################################
 # Next steps
