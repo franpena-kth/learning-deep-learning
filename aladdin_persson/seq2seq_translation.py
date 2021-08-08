@@ -3,8 +3,8 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchtext.datasets import Multi30k
-from torchtext.data import Field, BucketIterator
+from torchtext.legacy.datasets import Multi30k
+from torchtext.legacy.data import Field, BucketIterator
 import numpy as np
 import spacy
 import random
@@ -118,6 +118,10 @@ class Seq2Seq(nn.Module):
         return outputs
 
 
+def count_parameters(model: nn.Module):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
 def train():
     spacy_ger = de_core_news_md.load()
     spacy_eng = en_core_web_sm.load()
@@ -189,6 +193,8 @@ def train():
     model = Seq2Seq(encoder_net, decoder_net, len(english.vocab), device).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
+    print(f"{time.strftime('%Y/%m/%d-%H:%M:%S')}: The model has {count_parameters(model):,} trainable parameters")
+
     pad_idx = english.vocab.stoi["<pad>"]
     criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
@@ -202,7 +208,7 @@ def train():
         print(f"{time.strftime('%Y/%m/%d-%H:%M:%S')}: [Epoch {epoch} / {num_epochs}]")
 
         checkpoint = {"state_dict": model.state_dict(), "optimizer": optimizer.state_dict()}
-        save_checkpoint(checkpoint)
+        # save_checkpoint(checkpoint)
 
         model.eval()
 
@@ -221,6 +227,12 @@ def train():
 
             # Forward prop
             output = model(inp_data, target)
+
+            # print('\n')
+            # print('Input', inp_data.shape)
+            # print('Target', target.shape)
+            # print('Output', output.shape)
+            # print('---------------------')
 
             # Output is of shape (trg_len, batch_size, output_dim) but Cross Entropy Loss
             # doesn't take input in that form. For example if we have MNIST we want to have
@@ -246,6 +258,7 @@ def train():
 
             # Plot to tensorboard
             writer.add_scalar("Training loss", loss, global_step=step)
+            # print("Training loss", loss)
             step += 1
 
     score = bleu(test_data[1:100], model, german, english, device)
@@ -258,6 +271,7 @@ def main():
 
 
 start = time.time()
+print("%s: Process started" % (time.strftime("%Y/%m/%d-%H:%M:%S")))
 main()
 end = time.time()
 total_time = end - start
